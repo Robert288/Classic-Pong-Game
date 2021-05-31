@@ -1,35 +1,38 @@
 #include <avr/io.h>
 #include "scheduler.h"
 #include "timer.h"
-#include "Player1SM.h"
-#include "Player1Buttons.h"
+#include "Player1.h"
+#include "AI.h"
+#include "Ball.h"
 
-#ifdef _SIMULATE_
-#include "simAVRHeader.h"
-#endif
+task tasks[3];
 
-task tasks[2];
-
-const unsigned char tasksNum = 2;
-const unsigned long tasksPeriodGCD = 10;
-const unsigned long periodPlayer1 = 100;
-const unsigned long periodPlayer1Buttons = 10;
+const unsigned char tasksNum = 3;
+const unsigned long tasksPeriodGCD = 1;
+const unsigned long periodP1 = 5;
+const unsigned long periodP1Buttons = 10;
+const unsigned long periodAI = 10;
 
 int main(void) {
 	DDRB = 0x00; PORTB = 0xFF;
 	DDRC = 0xFF; PORTC = 0x00;
 	DDRD = 0xFF; PORTD = 0x00;
 	
-	tasks[0].state = Player1_Start;
-	tasks[0].period = periodPlayer1;
+	tasks[0].state = P1Wait;
+	tasks[0].period = periodP1;
 	tasks[0].elapsedTime = tasks[0].period;
-	tasks[0].TickFct = &TickFct_Player1;
+	tasks[0].TickFct = &TickFct_P1;
 
-	tasks[1].state = Player1Buttons_Start;
-	tasks[1].period = periodPlayer1Buttons;
+	tasks[1].state = P1ButtonsWait;
+	tasks[1].period = periodP1Buttons;
 	tasks[1].elapsedTime = tasks[1].period;
-	tasks[1].TickFct = &TickFct_Player1Buttons;
-
+	tasks[1].TickFct = &TickFct_P1Buttons;
+	
+	tasks[2].state = AIWait;
+	tasks[2].period = periodAI;
+	tasks[2].elapsedTime = tasks[2].period;
+	tasks[2].TickFct = &TickFct_AI;
+	
 	PORTC = 0x00;
 	PORTD = 0x00;
 	
@@ -37,7 +40,7 @@ int main(void) {
 	TimerOn();
 	
 	unsigned char i;
-    while (1) {
+	while (1) {
 		for (i = 0; i < tasksNum; ++i) {
 			if (tasks[i].elapsedTime >= tasks[i].period) {
 				tasks[i].state = tasks[i].TickFct(tasks[i].state);
@@ -45,11 +48,7 @@ int main(void) {
 			}
 			tasks[i].elapsedTime += tasksPeriodGCD;
 		}
-		
 		while (!TimerFlag);
 		TimerFlag = 0;
-    }
-	
-	return 1;
+	}
 }
-
